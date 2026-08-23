@@ -1,0 +1,54 @@
+{
+  "name": "battery-monitor",
+  "productName": "电池状态监控",
+  "version": "1.0.0",
+  "description": "BestAutomation 电池管理系统 PC 端监控软件（Modbus-RTU）",
+  "main": "src/main/main.js",
+  "author": "BestAutomation",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.bestautomation.batterymonitor",
+    "productName": "电池状态监控",
+    "copyright": "Copyright © BestAutomation",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "电池状态监控",
+      "language": "2052"
+    }
+  }
+}

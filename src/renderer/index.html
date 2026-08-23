@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>电池状态监控</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 自定义标题栏 -->
+  <header class="titlebar">
+    <div class="titlebar-left">
+      <svg class="app-logo" viewBox="0 0 24 24" width="16" height="16">
+        <rect x="2" y="7" width="17" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <rect x="4" y="9" width="9" height="6" rx="1" fill="currentColor"/>
+        <path d="M20 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="app-title">电池状态监控</span>
+      <span class="app-brand">BestAutomation</span>
+    </div>
+    <div class="titlebar-right">
+      <button id="btn-min" class="win-btn" title="最小化到托盘">
+        <svg viewBox="0 0 12 12" width="12" height="12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-close" class="win-btn win-btn-close" title="关闭到托盘">
+        <svg viewBox="0 0 12 12" width="12" height="12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ======= 仪表盘视图 ======= -->
+  <main id="view-dashboard" class="view">
+    <div class="status-row">
+      <div id="conn-pill" class="conn-pill disconnected">
+        <span class="conn-dot"></span><span id="conn-text">未连接</span>
+      </div>
+      <div class="status-meta">
+        <span id="meta-device"></span>
+        <span id="meta-update"></span>
+      </div>
+      <button id="btn-goto-settings" class="icon-btn" title="设置">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h0a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h0a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v0a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="error-banner" class="error-banner hidden"></div>
+
+    <div class="cards">
+      <!-- 电池 A -->
+      <section class="battery-card" id="card-A">
+        <div class="card-head">
+          <h2>电池 A</h2>
+          <span class="badge badge-running hidden" data-role="running">运行中</span>
+        </div>
+        <div class="battery-visual">
+          <div class="battery-shell">
+            <div class="battery-fill" data-role="fill"></div>
+            <span class="battery-soc" data-role="soc">--%</span>
+          </div>
+          <div class="battery-cap"></div>
+        </div>
+        <div class="card-stats">
+          <div class="stat"><span class="stat-label">电压</span><span class="stat-value" data-role="voltage">--</span></div>
+          <div class="stat"><span class="stat-label">电量</span><span class="stat-value" data-role="soc2">--</span></div>
+          <div class="stat"><span class="stat-label">状态</span><span class="stat-value" data-role="status">--</span></div>
+        </div>
+        <div class="badge badge-low hidden" data-role="low">⚠ 电量低，请充电</div>
+        <div class="badge badge-warn hidden" data-role="voltwarn">⚠ 电压异常偏低</div>
+      </section>
+
+      <!-- 电池 B -->
+      <section class="battery-card" id="card-B">
+        <div class="card-head">
+          <h2>电池 B</h2>
+          <span class="badge badge-running hidden" data-role="running">运行中</span>
+        </div>
+        <div class="battery-visual">
+          <div class="battery-shell">
+            <div class="battery-fill" data-role="fill"></div>
+            <span class="battery-soc" data-role="soc">--%</span>
+          </div>
+          <div class="battery-cap"></div>
+        </div>
+        <div class="card-stats">
+          <div class="stat"><span class="stat-label">电压</span><span class="stat-value" data-role="voltage">--</span></div>
+          <div class="stat"><span class="stat-label">电量</span><span class="stat-value" data-role="soc2">--</span></div>
+          <div class="stat"><span class="stat-label">状态</span><span class="stat-value" data-role="status">--</span></div>
+        </div>
+        <div class="badge badge-low hidden" data-role="low">⚠ 电量低，请充电</div>
+        <div class="badge badge-warn hidden" data-role="voltwarn">⚠ 电压异常偏低</div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <span id="foot-adc"></span>
+      <span id="foot-config"></span>
+    </footer>
+  </main>
+
+  <!-- ======= 设置视图 ======= -->
+  <main id="view-settings" class="view hidden">
+    <div class="settings-head">
+      <button id="btn-back" class="icon-btn" title="返回">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2>设置</h2>
+    </div>
+
+    <div class="settings-body">
+      <div class="form-row">
+        <label>串口（COM 口）</label>
+        <div class="inline-controls">
+          <select id="set-port"></select>
+          <button id="btn-refresh-ports" class="btn btn-ghost" title="重新扫描串口">刷新</button>
+        </div>
+        <p class="hint">电池监控硬件所连接的串口，固定 115200-8-N-1</p>
+      </div>
+
+      <div class="form-row">
+        <label>监控频率 <span id="interval-val" class="mono">每 1 秒 1 次</span></label>
+        <input type="range" id="set-interval" min="1" max="15" step="1" value="1" />
+        <p class="hint">向电池监控硬件发送查询指令的周期（1 ~ 15 秒可调）</p>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>开机自动启动</label>
+          <p class="hint">登录 Windows 后自动运行并驻留托盘</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="set-autostart" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>Modbus 从站地址</label>
+          <p class="hint">设备出厂固定为 1，除非设备端修改否则无需更改</p>
+        </div>
+        <input type="number" id="set-slave" class="num-input" min="1" max="247" value="1" />
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>低电量阈值（%）</label>
+          <p class="hint">电量 ≤ 该值时图标与界面显示“需充电”警示</p>
+        </div>
+        <input type="number" id="set-lowth" class="num-input" min="1" max="100" value="20" />
+      </div>
+
+      <div class="form-row">
+        <label>配置文件</label>
+        <div class="inline-controls">
+          <code id="config-path" class="config-path"></code>
+          <button id="btn-open-config" class="btn btn-ghost">打开所在目录</button>
+        </div>
+        <p class="hint">可直接编辑该 JSON 文件修改设置；文件损坏时软件将自动使用默认值</p>
+      </div>
+    </div>
+
+    <div class="settings-foot">
+      <button id="btn-reset" class="btn btn-ghost">恢复默认</button>
+      <button id="btn-save" class="btn btn-primary">保存并应用</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

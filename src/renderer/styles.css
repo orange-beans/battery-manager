@@ -1,0 +1,238 @@
+/* ===== 电池状态监控 - 深色主题 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0d1220;
+  --bg-card: #161d31;
+  --bg-card-hover: #1a2340;
+  --border: #26304d;
+  --text: #e8ecf6;
+  --text-dim: #8b94ad;
+  --accent: #3ddc84;
+  --amber: #f5a623;
+  --red: #ff5252;
+  --blue: #4f8cff;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif;
+  background: radial-gradient(1200px 600px at 80% -10%, #182242 0%, var(--bg) 55%);
+  color: var(--text);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.hidden { display: none !important; }
+.mono { font-variant-numeric: tabular-nums; }
+
+/* ===== 标题栏 ===== */
+.titlebar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 0 14px;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+.titlebar-left { display: flex; align-items: center; gap: 8px; color: var(--accent); }
+.app-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.app-brand { font-size: 11px; color: var(--text-dim); letter-spacing: .5px; }
+.titlebar-right { display: flex; -webkit-app-region: no-drag; }
+.win-btn {
+  width: 42px; height: 40px; border: none; background: transparent;
+  color: var(--text-dim); cursor: pointer; display: grid; place-items: center;
+}
+.win-btn:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.win-btn-close:hover { background: #e81123; color: #fff; }
+
+/* ===== 视图容器 ===== */
+.view { flex: 1; display: flex; flex-direction: column; padding: 6px 20px 14px; min-height: 0; }
+
+/* ===== 状态行 ===== */
+.status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.conn-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--bg-card);
+}
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; }
+.conn-pill.connected { color: var(--accent); border-color: rgba(61,220,132,.35); }
+.conn-pill.connected .conn-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.conn-pill.disconnected { color: var(--red); border-color: rgba(255,82,82,.35); }
+.conn-pill.disconnected .conn-dot { background: var(--red); }
+.status-meta { flex: 1; display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); }
+
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-dim); cursor: pointer; display: grid; place-items: center;
+  transition: all .15s;
+}
+.icon-btn:hover { color: var(--text); background: var(--bg-card-hover); border-color: #34405f; }
+
+/* ===== 错误横幅 ===== */
+.error-banner {
+  margin-bottom: 12px; padding: 9px 14px; border-radius: 9px;
+  background: rgba(255,82,82,.1); border: 1px solid rgba(255,82,82,.35);
+  color: #ff8a8a; font-size: 12.5px;
+}
+
+/* ===== 电池卡片 ===== */
+.cards { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
+.battery-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: border-color .2s, box-shadow .2s;
+  position: relative;
+}
+.battery-card.low {
+  border-color: rgba(255,82,82,.55);
+  box-shadow: 0 0 0 1px rgba(255,82,82,.25), 0 0 24px rgba(255,82,82,.12);
+  animation: lowPulse 1.6s ease-in-out infinite;
+}
+@keyframes lowPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,82,82,.25), 0 0 18px rgba(255,82,82,.10); }
+  50%      { box-shadow: 0 0 0 1px rgba(255,82,82,.45), 0 0 30px rgba(255,82,82,.22); }
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; }
+.card-head h2 { font-size: 16px; font-weight: 600; }
+
+.badge {
+  font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+}
+.badge-running { color: var(--blue); background: rgba(79,140,255,.12); border: 1px solid rgba(79,140,255,.4); }
+.badge-low, .badge-warn { align-self: flex-start; }
+.badge-low { color: #ff8a8a; background: rgba(255,82,82,.12); border: 1px solid rgba(255,82,82,.45); }
+.badge-warn { color: #ffcf7a; background: rgba(245,166,35,.12); border: 1px solid rgba(245,166,35,.45); }
+
+/* 电池图形 */
+.battery-visual { display: flex; align-items: center; gap: 5px; }
+.battery-shell {
+  position: relative; flex: 1; height: 74px;
+  border: 2.5px solid #4a5878; border-radius: 10px;
+  overflow: hidden; background: #0f1526;
+}
+.battery-cap { width: 7px; height: 28px; border-radius: 0 4px 4px 0; background: #4a5878; }
+.battery-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: linear-gradient(180deg, #4ee898 0%, #2bc56e 100%);
+  transition: width .5s ease, background .3s;
+}
+.battery-fill.amber { background: linear-gradient(180deg, #ffc25e 0%, #f09a1d 100%); }
+.battery-fill.red { background: linear-gradient(180deg, #ff7a7a 0%, #e83a3a 100%); }
+.battery-soc {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 26px; font-weight: 700; letter-spacing: .5px;
+  color: var(--text); text-shadow: 0 1px 4px rgba(0,0,0,.6);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 数据行 */
+.card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat {
+  background: #10172b; border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 12px; display: flex; flex-direction: column; gap: 3px;
+}
+.stat-label { font-size: 11px; color: var(--text-dim); }
+.stat-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-value.text-red { color: var(--red); }
+.stat-value.text-amber { color: var(--amber); }
+.stat-value.text-green { color: var(--accent); }
+.stat-value.text-blue { color: var(--blue); }
+
+.foot {
+  margin-top: 12px; display: flex; justify-content: space-between;
+  font-size: 11.5px; color: var(--text-dim);
+}
+
+/* ===== 设置页 ===== */
+.settings-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.settings-head h2 { font-size: 17px; font-weight: 600; }
+.settings-body {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+  padding-right: 4px; min-height: 0;
+}
+.settings-body::-webkit-scrollbar { width: 8px; }
+.settings-body::-webkit-scrollbar-thumb { background: #2a3552; border-radius: 4px; }
+
+.form-row {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.form-row-inline { flex-direction: row; align-items: center; justify-content: space-between; }
+.form-row label { font-size: 13.5px; font-weight: 600; }
+.hint { font-size: 11.5px; color: var(--text-dim); }
+.inline-controls { display: flex; gap: 8px; align-items: center; }
+
+select, .num-input {
+  background: #10172b; color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; outline: none;
+  font-family: inherit;
+}
+select { flex: 1; min-width: 0; }
+select:focus, .num-input:focus { border-color: var(--blue); }
+.num-input { width: 90px; text-align: center; }
+
+.config-path {
+  flex: 1; min-width: 0; font-size: 11.5px; color: var(--text-dim);
+  background: #10172b; border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  user-select: text;
+}
+
+/* 滑块 */
+input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #26304d; outline: none; }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--blue); cursor: pointer; border: 3px solid #0d1220;
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+/* 开关 */
+.switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute; inset: 0; border-radius: 999px; cursor: pointer;
+  background: #26304d; transition: .2s;
+}
+.switch .slider::before {
+  content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  left: 3px; top: 3px; background: #8b94ad; transition: .2s;
+}
+.switch input:checked + .slider { background: rgba(61,220,132,.35); }
+.switch input:checked + .slider::before { transform: translateX(20px); background: var(--accent); }
+
+/* 按钮 */
+.btn {
+  border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent; font-family: inherit;
+  transition: all .15s;
+}
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #3f7ef2; }
+.btn-ghost { background: transparent; color: var(--text-dim); border-color: var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: #34405f; }
+
+.settings-foot {
+  display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+  background: #1c2743; border: 1px solid #34405f; color: var(--text);
+  padding: 10px 22px; border-radius: 999px; font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  animation: toastIn .2s ease;
+  z-index: 99;
+}
+.toast.error { border-color: rgba(255,82,82,.5); color: #ff8a8a; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }

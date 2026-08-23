@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage
+.eslintcache
+
+# Dependency directory
+# https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
+node_modules
+
+# OSX
+.DS_Store
+
+# 使用手册
+Manuel.pdf
+
+release/app/dist
+release/build
+.erb/dll
+
+.idea
+npm-debug.log.*
+*.css.d.ts
+*.sass.d.ts
+*.scss.d.ts
+
+# App database
+output
+**/database/*.db
+**/database/*.db~
+**/database/backup_*
+**/databaseSqlite/app.db
+**/databaseSqlite/app.db-shm
+**/databaseSqlite/app.db-wal
+**/databaseSqlite/.migrated
