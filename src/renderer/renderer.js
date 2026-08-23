@@ -58,7 +58,7 @@ function renderBattery(key, bat) {
   voltEl.className = `stat-value ${bat.voltageWarn ? 'text-amber' : ''}`.trim();
 
   const soc2 = $('[data-role="soc2"]', card);
-  soc2.textContent = `${bat.soc} %`;
+  soc2.textContent = `${bat.soc}%`; // 与电池壳内电量格式一致
   soc2.className = `stat-value ${bat.low ? 'text-red' : bat.soc <= 50 ? 'text-amber' : 'text-green'}`;
 
   const st = $('[data-role="status"]', card);

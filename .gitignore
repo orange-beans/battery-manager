@@ -21,6 +21,7 @@ node_modules
 # 使用手册
 Manuel.pdf
 
+release/
 release/app/dist
 release/build
 .erb/dll

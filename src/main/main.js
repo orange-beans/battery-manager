@@ -108,11 +108,14 @@ function updateTray(state) {
 // ---------- 开机自启 ----------
 function applyAutoStart() {
   if (!app.isPackaged) return; // 开发模式下不写入启动项（指向 electron.exe 无意义）
+  // 便携版运行时 process.execPath 指向临时解压目录，自启必须指向便携 exe 本体，
+  // 否则注册表里记录的是临时路径，重启后自启失效
+  const execPath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
   try {
     app.setLoginItemSettings({
       openAtLogin: !!settings.autoStart,
       openAsHidden: true, // 开机自启时静默驻留托盘
-      path: process.execPath,
+      path: execPath,
     });
   } catch (e) {
     console.error('设置开机自启失败：', e);

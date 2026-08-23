@@ -65,14 +65,12 @@ function trayForState(state, settings) {
   const { key, battery } = active;
   const lv = levelOf(battery.soc);
   const image = loadIcon(battery.low ? `low_${lv}` : `bat_${lv}`);
-  const lines = [
-    `电池${key}（运行中）：${battery.soc}%  ${battery.voltage.toFixed(2)}V`,
-  ];
+  // 两块电池统一格式：电池X（运行中）：SOC%  xx.xx V（单位与主窗口一致，带空格）
+  const fmt = (k, b) => `电池${k}${b.running ? '（运行中）' : ''}：${b.soc}%  ${b.voltage.toFixed(2)} V`;
+  const lines = [fmt(key, battery)];
   const other = key === 'A' ? state.B : state.A;
-  if (other) {
-    lines.push(`电池${key === 'A' ? 'B' : 'A'}：${other.soc}%  ${other.voltage.toFixed(2)}V${other.running ? '  运行中' : ''}`);
-  }
-  if (battery.low) lines.push('⚠ 电量低，请及时充电');
+  if (other) lines.push(fmt(key === 'A' ? 'B' : 'A', other));
+  if (battery.low) lines.push('⚠ 电量低，请充电');
   lines.push('双击查看详情');
   return { image, tooltip: lines.join('\n') };
 }
