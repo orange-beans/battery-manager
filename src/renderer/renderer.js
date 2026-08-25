@@ -145,6 +145,9 @@ async function loadSettingsIntoForm() {
   $('#set-autostart').checked = settings.autoStart;
   $('#set-slave').value = settings.slaveAddress;
   $('#set-lowth').value = settings.lowBatteryThreshold;
+  $('#set-lowalert').checked = settings.lowAlertEnabled;
+  $('#set-lowalert-interval').value = settings.lowAlertIntervalMin;
+  $('#set-lowalert-interval').disabled = !settings.lowAlertEnabled;
   await refreshPorts(settings.port);
 }
 
@@ -156,6 +159,8 @@ async function saveSettings() {
     autoStart: $('#set-autostart').checked,
     slaveAddress: Number($('#set-slave').value),
     lowBatteryThreshold: Number($('#set-lowth').value),
+    lowAlertEnabled: $('#set-lowalert').checked,
+    lowAlertIntervalMin: Number($('#set-lowalert-interval').value),
   };
   const res = await window.api.saveSettings(newSettings);
   if (res.ok) {
@@ -179,6 +184,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 设置页交互
   $('#set-interval').addEventListener('input', (e) => {
     $('#interval-val').textContent = `每 ${e.target.value} 秒 1 次`;
+  });
+  $('#set-lowalert').addEventListener('change', (e) => {
+    $('#set-lowalert-interval').disabled = !e.target.checked;
   });
   $('#btn-refresh-ports').addEventListener('click', () => refreshPorts($('#set-port').value));
   $('#btn-save').addEventListener('click', saveSettings);

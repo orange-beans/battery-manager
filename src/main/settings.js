@@ -15,6 +15,9 @@ const DEFAULT_SETTINGS = {
   autoStart: true,        // 开机自启
   lowBatteryThreshold: 20,// 低电量阈值 %（SOC ≤ 该值判为需充电）
   lowVoltageWarn: 11.5,   // 电压异常提示阈值 V
+  lowAlertEnabled: true,  // 低电量提醒开关（系统通知 + 托盘图标闪烁）
+  lowAlertIntervalMin: 5, // 提醒频率（分钟）：0=仅提醒一次, 1/2/5/10
+  trayHintShown: false,   // 是否已展示过“拖出托盘图标”的首次运行提示
 };
 
 function clamp(v, min, max, fallback) {
@@ -35,6 +38,9 @@ function sanitize(raw) {
     autoStart: typeof s.autoStart === 'boolean' ? s.autoStart : d.autoStart,
     lowBatteryThreshold: Math.round(clamp(s.lowBatteryThreshold, 1, 100, d.lowBatteryThreshold)),
     lowVoltageWarn: clamp(s.lowVoltageWarn, 0, 20, d.lowVoltageWarn),
+    lowAlertEnabled: typeof s.lowAlertEnabled === 'boolean' ? s.lowAlertEnabled : d.lowAlertEnabled,
+    lowAlertIntervalMin: [0, 1, 2, 5, 10].includes(s.lowAlertIntervalMin) ? s.lowAlertIntervalMin : d.lowAlertIntervalMin,
+    trayHintShown: typeof s.trayHintShown === 'boolean' ? s.trayHintShown : d.trayHintShown,
   };
 }
 

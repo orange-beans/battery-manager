@@ -3,7 +3,7 @@
  * 主进程入口：窗口管理、系统托盘、开机自启、设置持久化、IPC
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell } = require('electron');
 const path = require('path');
 const { SerialPort } = require('serialport');
 const { SettingsStore } = require('./settings');
@@ -16,6 +16,12 @@ let store = null;
 let settings = null;
 let monitor = null;
 let isQuitting = false;
+
+// 低电量提醒状态
+let alerting = false;      // 当前是否处于低电量提醒中
+let lastAlertAt = 0;       // 上次弹通知的时间戳
+let notifiedOnce = false;  // “仅提醒一次”模式是否已提醒过
+let flashTimer = null;     // 托盘图标闪烁定时器
 
 // ---------- 单实例：重复启动时聚焦已有窗口 ----------
 const gotLock = app.requestSingleInstanceLock();
@@ -87,6 +93,7 @@ function buildTrayMenu() {
     { label: '设置', click: () => showWindow('settings') },
     { type: 'separator' },
     { label: '打开配置文件', click: () => shell.showItemInFolder(store.file) },
+    { label: '任务栏图标设置', click: () => shell.openExternal('ms-settings:taskbar') },
     { type: 'separator' },
     {
       label: '退出',
@@ -101,8 +108,93 @@ function buildTrayMenu() {
 function updateTray(state) {
   if (!tray) return;
   const { image, tooltip } = trayForState(state, settings);
-  tray.setImage(image);
+  if (!flashTimer) tray.setImage(image); // 闪烁期间不覆盖闪烁图标，仅更新提示文本
   tray.setToolTip(tooltip);
+}
+
+// ---------- 低电量提醒（系统通知 + 托盘图标闪烁） ----------
+function showLowAlert(state) {
+  // 多块低电量时优先提醒电量更低者（与托盘图标策略一致）
+  const bat = [state.A, state.B]
+    .filter((b) => b && b.running && b.low)
+    .sort((x, y) => x.soc - y.soc)[0];
+  if (!bat) return;
+  const key = bat === state.A ? 'A' : 'B';
+  // 注意：曾尝试自定义 toastXml（scenario="reminder"）以延长弹窗显示时间，
+  // 但 Electron 在 Windows 上有已知 bug（issue #39367），自定义 XML 通知会静默不显示，
+  // 故回退为标准通知。弹窗停留时长由系统控制（约数秒），通知会保留在通知中心，
+  // 托盘图标闪烁会持续到低电量结束，不影响提醒效果。
+  const n = new Notification({
+    title: '电池低电量提醒',
+    body: `电池${key}（运行中）电量 ${bat.soc}%，请及时充电`,
+    icon: trayForState(state, settings).image, // 复用低电量托盘图标
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.show();
+}
+
+function startFlash(state) {
+  if (flashTimer) return;
+  // 正常态（忽略 low 标志）用于与低电量图标交替闪烁
+  const normalState = {
+    ...state,
+    A: state.A ? { ...state.A, low: false } : null,
+    B: state.B ? { ...state.B, low: false } : null,
+  };
+  const lowImg = trayForState(state, settings).image;
+  const normalImg = trayForState(normalState, settings).image;
+  let showLow = true;
+  flashTimer = setInterval(() => {
+    showLow = !showLow;
+    tray.setImage(showLow ? lowImg : normalImg);
+  }, 800);
+}
+
+function stopFlash() {
+  if (flashTimer) {
+    clearInterval(flashTimer);
+    flashTimer = null;
+  }
+  if (tray) updateTray(monitor.state); // 恢复真实图标
+}
+
+/** 每次收到监控更新时评估是否需要提醒/停止提醒 */
+function evaluateAlert(state) {
+  if (!settings.lowAlertEnabled) {
+    stopAlert();
+    return;
+  }
+  const lowRunning =
+    !!state && state.connected && [state.A, state.B].some((b) => b && b.running && b.low);
+  if (!lowRunning) {
+    stopAlert();
+    return;
+  }
+  const now = Date.now();
+  if (!alerting) {
+    alerting = true;
+    lastAlertAt = 0;
+    notifiedOnce = false;
+    startFlash(state);
+  }
+  if (settings.lowAlertIntervalMin === 0) {
+    // 仅提醒一次：同一段低电量期间只弹一次
+    if (!notifiedOnce) {
+      notifiedOnce = true;
+      showLowAlert(state);
+    }
+  } else if (now - lastAlertAt >= settings.lowAlertIntervalMin * 60 * 1000) {
+    lastAlertAt = now;
+    showLowAlert(state);
+  }
+}
+
+function stopAlert() {
+  if (!alerting) return;
+  alerting = false;
+  notifiedOnce = false;
+  stopFlash();
 }
 
 // ---------- 开机自启 ----------
@@ -165,6 +257,9 @@ function registerIpc() {
 
 // ---------- 启动 ----------
 app.whenReady().then(async () => {
+  // Windows 10+ 系统通知（Toast）必须设置 AppUserModelID，否则不显示
+  app.setAppUserModelId('com.bestautomation.batterymonitor');
+
   store = new SettingsStore(app.getPath('documents'));
   settings = store.load();
 
@@ -175,6 +270,7 @@ app.whenReady().then(async () => {
   monitor = new BatteryMonitor();
   monitor.on('update', (state) => {
     updateTray(state);
+    evaluateAlert(state);
     if (mainWindow) mainWindow.webContents.send('battery:update', state);
   });
 
@@ -182,6 +278,22 @@ app.whenReady().then(async () => {
   createWindow(!launchedAtLogin);
   createTray();
   applyAutoStart();
+
+  // 首次运行：引导用户把托盘图标从溢出区拖到通知区常驻（仅一次）
+  if (!settings.trayHintShown) {
+    settings = store.save({ ...settings, trayHintShown: true });
+    try {
+      const hint = new Notification({
+        title: '电池状态监控',
+        body: '电池图标默认在任务栏 ⌄ 溢出区中，可将其拖出到通知区即可常驻显示。',
+        silent: true,
+      });
+      hint.show();
+    } catch (e) {
+      console.error('首次运行提示失败：', e);
+    }
+  }
+
   await monitor.configure(settings);
 
   app.on('activate', () => showWindow());
@@ -193,5 +305,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', async () => {
   isQuitting = true;
+  stopFlash();
   if (monitor) await monitor.stop();
 });

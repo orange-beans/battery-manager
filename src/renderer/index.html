@@ -152,6 +152,31 @@
         <input type="number" id="set-lowth" class="num-input" min="1" max="100" value="20" />
       </div>
 
+      <div class="form-row form-row-inline">
+        <div>
+          <label>低电量提醒</label>
+          <p class="hint">运行中的电池电量低于阈值时，弹出系统通知并闪烁托盘图标</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="set-lowalert" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>提醒频率</label>
+          <p class="hint">低电量持续期间，重复提醒的间隔</p>
+        </div>
+        <select id="set-lowalert-interval" class="num-input">
+          <option value="0">仅提醒一次</option>
+          <option value="1">每 1 分钟</option>
+          <option value="2">每 2 分钟</option>
+          <option value="5">每 5 分钟</option>
+          <option value="10">每 10 分钟</option>
+        </select>
+      </div>
+
       <div class="form-row">
         <label>配置文件</label>
         <div class="inline-controls">
