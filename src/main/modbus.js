@@ -44,6 +44,7 @@ class ModbusRTUClient {
     this.port = null;
     this._rx = Buffer.alloc(0);
     this._pending = null; // 当前等待响应的请求
+    this._lock = Promise.resolve(); // 事务互斥锁：串行化所有读写
   }
 
   get isOpen() {
@@ -139,7 +140,17 @@ class ModbusRTUClient {
   }
 
   /**
-   * 发送一次请求并等待响应
+   * 互斥锁：所有事务排队串行执行，避免写入与轮询读“打架”
+   * （Modbus-RTU 单主站半双工，同一时刻只能有一个在途请求）
+   */
+  _withLock(fn) {
+    const run = this._lock.then(fn, fn);
+    this._lock = run.then(() => {}, () => {});
+    return run;
+  }
+
+  /**
+   * 发送一次请求并等待响应（经互斥锁串行化）
    * @param {number} slave       从站地址
    * @param {number} fc          功能码
    * @param {Buffer} reqData     功能码之后的数据区
@@ -147,6 +158,10 @@ class ModbusRTUClient {
    * @returns {Promise<Buffer>}  完整响应帧（含 CRC）
    */
   _transact(slave, fc, reqData, respDataLen) {
+    return this._withLock(() => this._transactUnlocked(slave, fc, reqData, respDataLen));
+  }
+
+  _transactUnlocked(slave, fc, reqData, respDataLen) {
     return new Promise((resolve, reject) => {
       if (this._pending) return reject(new ModbusError('上一请求尚未完成', 'BUSY'));
       this.open().then(() => {
@@ -197,6 +212,45 @@ class ModbusRTUClient {
     const regs = [];
     for (let i = 0; i < quantity; i++) regs.push(frame.readUInt16BE(3 + i * 2));
     return regs;
+  }
+
+  /**
+   * 功能码 0x03：读保持寄存器，按 int16 有符号解析（用于偏移量等带符号参数）
+   * @returns {Promise<number[]>} 有符号寄存器值数组
+   */
+  async readHoldingRegistersSigned(slave, address, quantity) {
+    const reqData = Buffer.alloc(4);
+    reqData.writeUInt16BE(address, 0);
+    reqData.writeUInt16BE(quantity, 2);
+    const frame = await this._transact(slave, 0x03, reqData, quantity * 2);
+    const byteCount = frame[2];
+    if (byteCount !== quantity * 2) {
+      throw new ModbusError(`字节计数异常：期望 ${quantity * 2}，实际 ${byteCount}`, 'CRC');
+    }
+    const regs = [];
+    for (let i = 0; i < quantity; i++) {
+      regs.push(frame.readInt16BE(3 + i * 2));
+    }
+    return regs;
+  }
+
+  /**
+   * 功能码 0x06：写单个保持寄存器
+   * 正常响应为请求回显（无字节计数，帧长固定 8 字节）；
+   * 越界等非法数据时设备返回异常 0x03。
+   * @returns {Promise<number>} 写入的寄存器值
+   */
+  async writeSingleRegister(slave, address, value) {
+    const v = value & 0xFFFF;
+    const reqData = Buffer.alloc(4);
+    reqData.writeUInt16BE(address, 0);
+    reqData.writeUInt16BE(v, 2);
+    // respDataLen=3 使期望帧长 = 3 + 3 + 2 = 8（地址+功能码+地址2+值2+CRC2）
+    const frame = await this._transact(slave, 0x06, reqData, 3);
+    if (frame.length !== 8 || frame.readUInt16BE(2) !== address || frame.readUInt16BE(4) !== v) {
+      throw new ModbusError('写寄存器回显校验失败', 'CRC');
+    }
+    return v;
   }
 }
 

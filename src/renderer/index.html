@@ -177,6 +177,36 @@
         </select>
       </div>
 
+      <div class="form-row form-row-inline">
+        <div>
+          <label>电池A偏移（mV）</label>
+          <p class="hint">硬件校准偏移量，范围 -1000 ~ 1000，写入后立即生效并保存到设备</p>
+        </div>
+        <div class="inline-controls">
+          <input type="number" id="set-offset-a" class="num-input" min="-1000" max="1000" step="1" placeholder="--" />
+          <button id="btn-write-offset-a" class="btn btn-ghost">写入A</button>
+        </div>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>电池B偏移（mV）</label>
+          <p class="hint">同上，B 通道偏移量</p>
+        </div>
+        <div class="inline-controls">
+          <input type="number" id="set-offset-b" class="num-input" min="-1000" max="1000" step="1" placeholder="--" />
+          <button id="btn-write-offset-b" class="btn btn-ghost">写入B</button>
+        </div>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <div>
+          <label>偏移量操作</label>
+          <p class="hint" id="offset-status">打开本页时将自动读取硬件当前偏移值</p>
+        </div>
+        <button id="btn-read-offset" class="btn btn-ghost">读取当前偏移值</button>
+      </div>
+
       <div class="form-row">
         <label>配置文件</label>
         <div class="inline-controls">

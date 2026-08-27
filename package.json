@@ -1,7 +1,7 @@
 {
   "name": "battery-monitor",
   "productName": "电池状态监控",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "BestAutomation 电池管理系统 PC 端监控软件（Modbus-RTU）",
   "main": "src/main/main.js",
   "author": "BestAutomation",

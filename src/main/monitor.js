@@ -77,6 +77,51 @@ class BatteryMonitor extends EventEmitter {
     }
   }
 
+  // ---------- 硬件偏移量（校准参数，寄存器 0x0100/0x0101，有符号 int16） ----------
+
+  _isClientReady() {
+    return !!(this.client && this.client.isOpen);
+  }
+
+  /** 读取 A/B 电池偏移量（mV） */
+  async readOffsets() {
+    if (!this._isClientReady()) {
+      const err = new Error('串口未连接');
+      err.code = 'NOT_CONNECTED';
+      throw err;
+    }
+    const [a, b] = await this.client.readHoldingRegistersSigned(this.config.slaveAddress, 0x0100, 2);
+    return { A: a, B: b };
+  }
+
+  /**
+   * 写入单个电池偏移量（mV），成功后读回确认
+   * @param {'A'|'B'} key
+   * @param {number} value -1000 ~ 1000
+   * @returns {Promise<{A:number, B:number}>} 写入后读回的 A/B 偏移
+   */
+  async writeOffset(key, value) {
+    if (key !== 'A' && key !== 'B') {
+      const err = new Error('电池标识无效');
+      err.code = 'BAD_ARG';
+      throw err;
+    }
+    const v = Math.round(Number(value));
+    if (!Number.isFinite(v) || v < -1000 || v > 1000) {
+      const err = new Error('偏移量需在 -1000 ~ 1000 mV 之间');
+      err.code = 'RANGE';
+      throw err;
+    }
+    if (!this._isClientReady()) {
+      const err = new Error('串口未连接');
+      err.code = 'NOT_CONNECTED';
+      throw err;
+    }
+    const addr = key === 'A' ? 0x0100 : 0x0101;
+    await this.client.writeSingleRegister(this.config.slaveAddress, addr, v);
+    return this.readOffsets(); // 写后读回验证
+  }
+
   async _loop() {
     while (!this._stopped && this.client) {
       const t0 = Date.now();

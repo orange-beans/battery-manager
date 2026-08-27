@@ -214,6 +214,21 @@ function applyAutoStart() {
   }
 }
 
+/** 把偏移量操作的异常转成用户可读的提示 */
+function offsetErrMsg(e) {
+  if (e && e.code === 'EXCEPTION') {
+    const m = /异常码 0x([0-9a-f]{2})/.exec(e.message);
+    const code = m ? parseInt(m[1], 16) : null;
+    if (code === 0x03) return '设备拒绝：数值越界或非法（异常 0x03），请输入 -1000 ~ 1000 mV';
+    if (code === 0x02) return '设备拒绝：寄存器不存在（异常 0x02）';
+    return code !== null ? `设备返回异常 0x${code.toString(16).padStart(2, '0')}` : e.message;
+  }
+  if (e && e.code === 'TIMEOUT') {
+    return '操作超时，请检查串口连接；如不确定是否生效，可点击“读取当前偏移值”确认';
+  }
+  return (e && e.message) || '操作失败';
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('state:get', () => ({
@@ -232,6 +247,25 @@ function registerIpc() {
       }));
     } catch {
       return [];
+    }
+  });
+
+  // ---------- 硬件偏移量读写 ----------
+  ipcMain.handle('offset:read', async () => {
+    try {
+      const offsets = await monitor.readOffsets();
+      return { ok: true, ...offsets };
+    } catch (e) {
+      return { ok: false, error: offsetErrMsg(e) };
+    }
+  });
+
+  ipcMain.handle('offset:write', async (_e, { battery, value }) => {
+    try {
+      const offsets = await monitor.writeOffset(battery, value);
+      return { ok: true, ...offsets };
+    } catch (e) {
+      return { ok: false, error: offsetErrMsg(e) };
     }
   });
 

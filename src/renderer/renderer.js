@@ -149,6 +149,7 @@ async function loadSettingsIntoForm() {
   $('#set-lowalert-interval').value = settings.lowAlertIntervalMin;
   $('#set-lowalert-interval').disabled = !settings.lowAlertEnabled;
   await refreshPorts(settings.port);
+  refreshOffsets(true); // 打开设置页自动读取硬件偏移（静默）
 }
 
 async function saveSettings() {
@@ -171,6 +172,46 @@ async function saveSettings() {
   }
 }
 
+// ---------- 硬件偏移量 ----------
+async function refreshOffsets(silent = false) {
+  const res = await window.api.readOffsets();
+  const status = $('#offset-status');
+  if (res.ok) {
+    $('#set-offset-a').value = res.A;
+    $('#set-offset-b').value = res.B;
+    status.textContent = `当前硬件偏移：A=${res.A}mV  B=${res.B}mV`;
+  } else {
+    status.textContent = res.error;
+    if (!silent) toast(res.error, true);
+  }
+}
+
+async function writeOffset(battery, btn) {
+  const input = $(`#set-offset-${battery.toLowerCase()}`);
+  const raw = input.value.trim();
+  const val = Number(raw);
+  if (raw === '' || !Number.isFinite(val) || val < -1000 || val > 1000) {
+    toast(`请输入 -1000 ~ 1000 之间的整数（当前：${raw || '空'}）`, true);
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const res = await window.api.writeOffset(battery, val);
+    const status = $('#offset-status');
+    if (res.ok) {
+      $('#set-offset-a').value = res.A;
+      $('#set-offset-b').value = res.B;
+      status.textContent = `写入成功，已读回确认：A=${res.A}mV  B=${res.B}mV`;
+      toast(`电池${battery}偏移已写入设备`);
+    } else {
+      status.textContent = res.error;
+      toast(res.error, true);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ---------- 初始化 ----------
 window.addEventListener('DOMContentLoaded', async () => {
   // 标题栏按钮：最小化/关闭均退回托盘
@@ -188,6 +229,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('#set-lowalert').addEventListener('change', (e) => {
     $('#set-lowalert-interval').disabled = !e.target.checked;
   });
+  $('#btn-read-offset').addEventListener('click', () => refreshOffsets(false));
+  $('#btn-write-offset-a').addEventListener('click', (e) => writeOffset('A', e.currentTarget));
+  $('#btn-write-offset-b').addEventListener('click', (e) => writeOffset('B', e.currentTarget));
   $('#btn-refresh-ports').addEventListener('click', () => refreshPorts($('#set-port').value));
   $('#btn-save').addEventListener('click', saveSettings);
   $('#btn-reset').addEventListener('click', async () => {

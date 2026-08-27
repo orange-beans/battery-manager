@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('api', {
   listPorts: () => ipcRenderer.invoke('ports:list'),
   /** 保存设置（主进程会校验、写盘并重启轮询） */
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+  /** 读取硬件电池偏移量（mV，A/B 各一） */
+  readOffsets: () => ipcRenderer.invoke('offset:read'),
+  /** 写入单个电池偏移量（battery: 'A'|'B'，value: -1000~1000） */
+  writeOffset: (battery, value) => ipcRenderer.invoke('offset:write', { battery, value }),
   /** 在资源管理器中定位配置文件 */
   openConfigFolder: () => ipcRenderer.invoke('config:openFolder'),
   /** 隐藏窗口到托盘 */
