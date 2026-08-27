@@ -7,6 +7,12 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 let currentSettings = null;
 let configPath = '';
 
+/** 版本号展示（主界面底部 + 设置页底部） */
+function renderVersion(v) {
+  $('#foot-version').textContent = v ? `V${v}` : '';
+  $('#settings-version').textContent = v ? `电池状态监控 V${v}` : '';
+}
+
 // ---------- 视图切换 ----------
 function showView(name) {
   $('#view-dashboard').classList.toggle('hidden', name !== 'dashboard');
@@ -104,10 +110,10 @@ function renderState(state) {
   $('#meta-update').textContent = state.lastOk
     ? `最后更新 ${new Date(state.lastOk).toLocaleTimeString('zh-CN', { hour12: false })}`
     : '';
+  // 仅连接时显示 ADC 调试信息（靠右，格式统一）
   $('#foot-adc').textContent = state.connected
-    ? `原始ADC  A: ${state.adcA}   B: ${state.adcB}（调试用）`
+    ? `ADC（调试）  A: ${state.adcA}   B: ${state.adcB}`
     : '';
-  $('#foot-config').textContent = configPath;
 }
 
 // ---------- 设置页 ----------
@@ -248,8 +254,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.api.onBatteryUpdate(renderState);
 
   // 首次加载
-  const { settings, configPath: cp, state } = await window.api.getState();
+  const { settings, configPath: cp, state, version } = await window.api.getState();
   currentSettings = settings;
   configPath = cp;
+  renderVersion(version);
   renderState(state);
 });
