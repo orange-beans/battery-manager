@@ -114,9 +114,12 @@ function updateTray(state) {
 
 // ---------- 低电量提醒（系统通知 + 托盘图标闪烁） ----------
 function showLowAlert(state) {
-  // 多块低电量时优先提醒电量更低者（与托盘图标策略一致）
-  const bat = [state.A, state.B]
-    .filter((b) => b && b.running && b.low)
+  const single = settings.batteryMode === 'single';
+  // 双电池：仅提醒“运行中且低电量”的电池，多块时优先提醒电量更低者
+  // 单电池：running 无意义，只要电池 A 低电量即提醒
+  const candidates = single ? [state.A] : [state.A, state.B];
+  const bat = candidates
+    .filter((b) => b && b.low && (single || b.running))
     .sort((x, y) => x.soc - y.soc)[0];
   if (!bat) return;
   const key = bat === state.A ? 'A' : 'B';
@@ -126,7 +129,7 @@ function showLowAlert(state) {
   // 托盘图标闪烁会持续到低电量结束，不影响提醒效果。
   const n = new Notification({
     title: '电池低电量提醒',
-    body: `电池${key}（运行中）电量 ${bat.soc}%，请及时充电`,
+    body: `电池${key}${single ? '' : '（运行中）'}电量 ${bat.soc}%，请及时充电`,
     icon: trayForState(state, settings).image, // 复用低电量托盘图标
     silent: false,
   });
@@ -165,9 +168,12 @@ function evaluateAlert(state) {
     stopAlert();
     return;
   }
-  const lowRunning =
-    !!state && state.connected && [state.A, state.B].some((b) => b && b.running && b.low);
-  if (!lowRunning) {
+  const single = settings.batteryMode === 'single';
+  // 单电池模式：running 无意义，仅看电池 A 是否低电量
+  const candidates = single ? [state.A] : [state.A, state.B];
+  const lowActive =
+    !!state && state.connected && candidates.some((b) => b && b.low && (single || b.running));
+  if (!lowActive) {
     stopAlert();
     return;
   }
@@ -271,8 +277,10 @@ function registerIpc() {
 
   ipcMain.handle('settings:save', async (_e, newSettings) => {
     try {
+      const prevMode = settings.batteryMode;
       settings = store.save(newSettings);
       applyAutoStart();
+      if (settings.batteryMode !== prevMode) stopAlert(); // 切换模式后清理残留提醒/闪烁
       await monitor.configure(settings); // 立即按新配置重启轮询
       return { ok: true, settings };
     } catch (e) {

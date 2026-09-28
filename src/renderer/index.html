@@ -119,6 +119,17 @@
         <p class="hint">电池监控硬件所连接的串口，固定 115200-8-N-1</p>
       </div>
 
+      <div class="form-row form-row-inline">
+        <div>
+          <label>电池模式</label>
+          <p class="hint">单电池模式仅监控电池 A（忽略运行状态）；保存后立即生效</p>
+        </div>
+        <select id="set-mode" class="num-input">
+          <option value="dual">双电池</option>
+          <option value="single">单电池</option>
+        </select>
+      </div>
+
       <div class="form-row">
         <label>监控频率 <span id="interval-val" class="mono">每 1 秒 1 次</span></label>
         <input type="range" id="set-interval" min="1" max="15" step="1" value="1" />
@@ -188,7 +199,7 @@
         </div>
       </div>
 
-      <div class="form-row form-row-inline">
+      <div class="form-row form-row-inline" id="row-offset-b">
         <div>
           <label>电池B偏移（mV）</label>
           <p class="hint">同上，B 通道偏移量</p>

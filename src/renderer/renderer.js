@@ -6,6 +6,21 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 let currentSettings = null;
 let configPath = '';
+let lastState = null; // 最近一次电池状态（切换模式后用于立即重渲染）
+
+/** 读取当前电池模式 */
+function isSingleMode() {
+  return currentSettings && currentSettings.batteryMode === 'single';
+}
+
+/** 按电池模式调整界面结构（卡片数量、标题、B 相关项显隐） */
+function applyModeUI() {
+  const single = isSingleMode();
+  $('.cards').classList.toggle('single', single);
+  $('#card-B').classList.toggle('hidden', single);
+  $('#card-A .card-head h2').textContent = single ? '电池' : '电池 A';
+  $('#row-offset-b').classList.toggle('hidden', single);
+}
 
 /** 版本号展示（主界面底部 + 设置页底部） */
 function renderVersion(v) {
@@ -38,7 +53,7 @@ function socClass(soc, low) {
   return '';
 }
 
-function renderBattery(key, bat) {
+function renderBattery(key, bat, single = false) {
   const card = $(`#card-${key}`);
   if (!bat) {
     $('[data-role="fill"]', card).style.width = '0%';
@@ -71,6 +86,10 @@ function renderBattery(key, bat) {
   if (bat.low) {
     st.textContent = '需充电';
     st.className = 'stat-value text-red';
+  } else if (single) {
+    // 单电池模式：running 无意义，仅区分正常/需充电
+    st.textContent = '正常';
+    st.className = 'stat-value text-green';
   } else if (bat.running) {
     st.textContent = '运行中';
     st.className = 'stat-value text-blue';
@@ -79,13 +98,16 @@ function renderBattery(key, bat) {
     st.className = 'stat-value';
   }
 
-  $('[data-role="running"]', card).classList.toggle('hidden', !bat.running);
+  $('[data-role="running"]', card).classList.toggle('hidden', single || !bat.running);
   $('[data-role="low"]', card).classList.toggle('hidden', !bat.low);
   $('[data-role="voltwarn"]', card).classList.toggle('hidden', !bat.voltageWarn || bat.voltage === 0);
   card.classList.toggle('low', bat.low);
 }
 
 function renderState(state) {
+  lastState = state;
+  applyModeUI();
+  const single = isSingleMode();
   const pill = $('#conn-pill');
   const connText = $('#conn-text');
   const banner = $('#error-banner');
@@ -101,8 +123,8 @@ function renderState(state) {
     banner.classList.remove('hidden');
   }
 
-  renderBattery('A', state.A);
-  renderBattery('B', state.B);
+  renderBattery('A', state.A, single);
+  if (!single) renderBattery('B', state.B);
 
   $('#meta-device').textContent = state.connected
     ? `设备ID ${state.deviceId} · 固件 ${state.firmware}`
@@ -110,9 +132,11 @@ function renderState(state) {
   $('#meta-update').textContent = state.lastOk
     ? `最后更新 ${new Date(state.lastOk).toLocaleTimeString('zh-CN', { hour12: false })}`
     : '';
-  // 仅连接时显示 ADC 调试信息（靠右，格式统一）
+  // 仅连接时显示 ADC 调试信息（靠右，格式统一）；单电池模式只显示 A
   $('#foot-adc').textContent = state.connected
-    ? `ADC（调试）  A: ${state.adcA}   B: ${state.adcB}`
+    ? single
+      ? `ADC（调试）  A: ${state.adcA}`
+      : `ADC（调试）  A: ${state.adcA}   B: ${state.adcB}`
     : '';
 }
 
@@ -154,8 +178,10 @@ async function loadSettingsIntoForm() {
   $('#set-lowalert').checked = settings.lowAlertEnabled;
   $('#set-lowalert-interval').value = settings.lowAlertIntervalMin;
   $('#set-lowalert-interval').disabled = !settings.lowAlertEnabled;
+  $('#set-mode').value = settings.batteryMode;
   await refreshPorts(settings.port);
   refreshOffsets(true); // 打开设置页自动读取硬件偏移（静默）
+  applyModeUI();
 }
 
 async function saveSettings() {
@@ -164,6 +190,7 @@ async function saveSettings() {
     port: $('#set-port').value,
     pollIntervalSec: Number($('#set-interval').value),
     autoStart: $('#set-autostart').checked,
+    batteryMode: $('#set-mode').value,
     slaveAddress: Number($('#set-slave').value),
     lowBatteryThreshold: Number($('#set-lowth').value),
     lowAlertEnabled: $('#set-lowalert').checked,
@@ -172,6 +199,8 @@ async function saveSettings() {
   const res = await window.api.saveSettings(newSettings);
   if (res.ok) {
     currentSettings = res.settings;
+    applyModeUI();
+    if (lastState) renderState(lastState); // 模式变化后按新布局立即重渲染
     toast('设置已保存并生效');
   } else {
     toast(`保存失败：${res.error}`, true);

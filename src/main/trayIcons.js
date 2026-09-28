@@ -33,10 +33,17 @@ function levelOf(soc) {
 }
 
 /**
- * 选出托盘应当展示的电池：优先“运行中”的；两块都在运行时取电量更低者（更保守）。
+ * 选出托盘应当展示的电池。
+ * 双电池模式：仅考虑“运行中”的电池，两块都在运行时取电量更低者（更保守）。
+ * 单电池模式：running 无意义，只要已连接就展示电池 A。
+ * @param {object} state
+ * @param {'dual'|'single'} mode
  * @returns {{key:'A'|'B', battery:object}|null}
  */
-function pickActiveBattery(state) {
+function pickActiveBattery(state, mode = 'dual') {
+  if (mode === 'single') {
+    return state.A ? { key: 'A', battery: state.A } : null;
+  }
   const cands = [];
   if (state.A && state.A.running) cands.push({ key: 'A', battery: state.A });
   if (state.B && state.B.running) cands.push({ key: 'B', battery: state.B });
@@ -49,27 +56,35 @@ function pickActiveBattery(state) {
  * 根据监控状态返回 { image, tooltip }
  */
 function trayForState(state, settings) {
+  const mode = (settings && settings.batteryMode) || 'dual';
+  const single = mode === 'single';
   if (!state || !state.connected) {
     return {
       image: loadIcon('disc'),
       tooltip: `电池状态监控 - 未连接\n${(state && state.error) || '串口未连接'}`,
     };
   }
-  const active = pickActiveBattery(state);
+  const active = pickActiveBattery(state, mode);
   if (!active) {
     return {
       image: loadIcon('idle'),
-      tooltip: '电池状态监控 - 已连接\n当前无电池处于运行状态',
+      tooltip: single
+        ? '电池状态监控 - 已连接\n电池 A 无数据'
+        : '电池状态监控 - 已连接\n当前无电池处于运行状态',
     };
   }
   const { key, battery } = active;
   const lv = levelOf(battery.soc);
   const image = loadIcon(battery.low ? `low_${lv}` : `bat_${lv}`);
-  // 两块电池统一格式：电池X（运行中）：SOC%  xx.xx V（单位与主窗口一致，带空格）
-  const fmt = (k, b) => `电池${k}${b.running ? '（运行中）' : ''}：${b.soc}%  ${b.voltage.toFixed(2)} V`;
+  // 双电池：电池X（运行中）：SOC%  xx.xx V
+  // 单电池：running 无意义，仅显示 电池A：SOC%  xx.xx V
+  const fmt = (k, b) =>
+    `电池${k}${!single && b.running ? '（运行中）' : ''}：${b.soc}%  ${b.voltage.toFixed(2)} V`;
   const lines = [fmt(key, battery)];
-  const other = key === 'A' ? state.B : state.A;
-  if (other) lines.push(fmt(key === 'A' ? 'B' : 'A', other));
+  if (!single) {
+    const other = key === 'A' ? state.B : state.A;
+    if (other) lines.push(fmt(key === 'A' ? 'B' : 'A', other));
+  }
   if (battery.low) lines.push('⚠ 电量低，请充电');
   lines.push('双击查看详情');
   return { image, tooltip: lines.join('\n') };

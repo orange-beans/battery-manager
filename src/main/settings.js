@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_SETTINGS = {
+  batteryMode: 'dual',    // 'dual' 双电池 | 'single' 单电池（仅监控电池 A）
   port: '',               // COM 口，如 "COM3"；空 = 未配置
   baudRate: 115200,       // 协议固定 115200-8N1
   pollIntervalSec: 1,     // 轮询周期，1~15 秒
@@ -31,6 +32,7 @@ function sanitize(raw) {
   const d = DEFAULT_SETTINGS;
   const s = raw && typeof raw === 'object' ? raw : {};
   return {
+    batteryMode: s.batteryMode === 'single' ? 'single' : 'dual',
     port: typeof s.port === 'string' ? s.port.trim() : d.port,
     baudRate: 115200, // 协议固定，不允许修改
     pollIntervalSec: Math.round(clamp(s.pollIntervalSec, 1, 15, d.pollIntervalSec)),
