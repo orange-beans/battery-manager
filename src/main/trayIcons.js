@@ -69,7 +69,7 @@ function trayForState(state, settings) {
     return {
       image: loadIcon('idle'),
       tooltip: single
-        ? '电池状态监控 - 已连接\n电池 A 无数据'
+        ? '电池状态监控 - 已连接\n电池 无数据'
         : '电池状态监控 - 已连接\n当前无电池处于运行状态',
     };
   }
@@ -77,9 +77,10 @@ function trayForState(state, settings) {
   const lv = levelOf(battery.soc);
   const image = loadIcon(battery.low ? `low_${lv}` : `bat_${lv}`);
   // 双电池：电池X（运行中）：SOC%  xx.xx V
-  // 单电池：running 无意义，仅显示 电池A：SOC%  xx.xx V
+  // 单电池：running 无意义，仅显示 电池：SOC%  xx.xx V
+  const label = (k) => (single ? '电池' : `电池${k}`);
   const fmt = (k, b) =>
-    `电池${k}${!single && b.running ? '（运行中）' : ''}：${b.soc}%  ${b.voltage.toFixed(2)} V`;
+    `${label(k)}${!single && b.running ? '（运行中）' : ''}：${b.soc}%  ${b.voltage.toFixed(2)} V`;
   const lines = [fmt(key, battery)];
   if (!single) {
     const other = key === 'A' ? state.B : state.A;

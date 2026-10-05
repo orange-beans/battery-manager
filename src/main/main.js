@@ -129,7 +129,7 @@ function showLowAlert(state) {
   // 托盘图标闪烁会持续到低电量结束，不影响提醒效果。
   const n = new Notification({
     title: '电池低电量提醒',
-    body: `电池${key}${single ? '' : '（运行中）'}电量 ${bat.soc}%，请及时充电`,
+    body: `${single ? '电池' : `电池${key}`}${single ? '' : '（运行中）'}电量 ${bat.soc}%，请及时充电`,
     icon: trayForState(state, settings).image, // 复用低电量托盘图标
     silent: false,
   });

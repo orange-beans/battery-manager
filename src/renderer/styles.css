@@ -84,9 +84,10 @@ body {
 
 /* ===== 电池卡片 ===== */
 .cards { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
-/* 单电池模式：单卡片居中，宽度约 60% */
-.cards.single { grid-template-columns: 1fr; justify-items: center; }
-.cards.single .battery-card { width: 60%; min-width: 360px; }
+/* 单电池模式：整个仪表盘收进一条居中列，卡片撑满并与状态行/底栏左右对齐 */
+.view.single-col { width: 100%; max-width: 700px; margin: 0 auto; }
+.cards.single { grid-template-columns: 1fr; }
+.cards.single .battery-card { width: 100%; min-width: 0; }
 .battery-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: 14px; padding: 18px 20px 14px;
