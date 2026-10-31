@@ -17,6 +17,11 @@ let settings = null;
 let monitor = null;
 let isQuitting = false;
 
+// 窗口宽度：双电池保持原宽度，单电池收窄到最小宽度
+const DUAL_WIDTH = 920;
+const SINGLE_WIDTH = 720;
+let dualWidth = DUAL_WIDTH; // 记录双电池模式下的窗口宽度，切回双电池时恢复
+
 // 低电量提醒状态
 let alerting = false;      // 当前是否处于低电量提醒中
 let lastAlertAt = 0;       // 上次弹通知的时间戳
@@ -33,10 +38,11 @@ if (!gotLock) {
 
 // ---------- 窗口 ----------
 function createWindow(showOnCreate) {
+  const initialWidth = settings && settings.batteryMode === 'single' ? SINGLE_WIDTH : DUAL_WIDTH;
   mainWindow = new BrowserWindow({
-    width: 920,
+    width: initialWidth,
     height: 640,
-    minWidth: 780,
+    minWidth: 720,
     minHeight: 560,
     show: false,
     frame: false,               // 自定义标题栏
@@ -59,6 +65,13 @@ function createWindow(showOnCreate) {
     if (showOnCreate) mainWindow.show();
   });
 
+  // 记录双电池模式下用户调整后的宽度，切回双电池时恢复
+  mainWindow.on('resize', () => {
+    if (settings && settings.batteryMode === 'dual') {
+      dualWidth = mainWindow.getSize()[0];
+    }
+  });
+
   // 最小化 / 关闭都退回托盘，不真正退出（退出走托盘菜单）
   mainWindow.on('minimize', () => mainWindow.hide());
   mainWindow.on('close', (e) => {
@@ -75,6 +88,15 @@ function showWindow(view) {
   if (!mainWindow.isVisible()) mainWindow.show();
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.focus();
+}
+
+/** 按电池模式调整窗口宽度：单电池收窄，双电池恢复上次宽度 */
+function applyModeWindowWidth(mode) {
+  if (!mainWindow) return;
+  const [w, h] = mainWindow.getSize();
+  const target = mode === 'single' ? SINGLE_WIDTH : dualWidth;
+  if (w === target) return;
+  mainWindow.setSize(target, h);
 }
 
 // ---------- 托盘 ----------
@@ -280,7 +302,10 @@ function registerIpc() {
       const prevMode = settings.batteryMode;
       settings = store.save(newSettings);
       applyAutoStart();
-      if (settings.batteryMode !== prevMode) stopAlert(); // 切换模式后清理残留提醒/闪烁
+      if (settings.batteryMode !== prevMode) {
+        stopAlert(); // 切换模式后清理残留提醒/闪烁
+        applyModeWindowWidth(settings.batteryMode); // 单电池收窄窗口，双电池恢复宽度
+      }
       await monitor.configure(settings); // 立即按新配置重启轮询
       return { ok: true, settings };
     } catch (e) {
