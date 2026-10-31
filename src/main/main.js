@@ -9,12 +9,14 @@ const { SerialPort } = require('serialport');
 const { SettingsStore } = require('./settings');
 const { BatteryMonitor } = require('./monitor');
 const { trayForState } = require('./trayIcons');
+const { StatusApiServer } = require('./statusApi');
 
 let mainWindow = null;
 let tray = null;
 let store = null;
 let settings = null;
 let monitor = null;
+let statusApi = null;
 let isQuitting = false;
 
 // 窗口宽度：双电池保持原宽度，单电池收窄到最小宽度
@@ -100,11 +102,17 @@ function applyModeWindowWidth(mode) {
 }
 
 // ---------- 托盘 ----------
+/** 状态接口启动失败时，在托盘提示中附带说明 */
+function withApiStatus(tooltip) {
+  if (!statusApi || !statusApi.error) return tooltip;
+  return `${tooltip}\n⚠ 状态接口未启动：${statusApi.error}`;
+}
+
 function createTray() {
   const { trayForState: forState } = require('./trayIcons');
   const { image, tooltip } = forState(monitor.state, settings);
   tray = new Tray(image);
-  tray.setToolTip(tooltip);
+  tray.setToolTip(withApiStatus(tooltip));
   tray.setContextMenu(buildTrayMenu());
   tray.on('double-click', () => showWindow());
 }
@@ -131,7 +139,7 @@ function updateTray(state) {
   if (!tray) return;
   const { image, tooltip } = trayForState(state, settings);
   if (!flashTimer) tray.setImage(image); // 闪烁期间不覆盖闪烁图标，仅更新提示文本
-  tray.setToolTip(tooltip);
+  tray.setToolTip(withApiStatus(tooltip));
 }
 
 // ---------- 低电量提醒（系统通知 + 托盘图标闪烁） ----------
@@ -300,11 +308,17 @@ function registerIpc() {
   ipcMain.handle('settings:save', async (_e, newSettings) => {
     try {
       const prevMode = settings.batteryMode;
+      const prevApiEnabled = settings.apiEnabled;
+      const prevApiPort = settings.apiPort;
       settings = store.save(newSettings);
       applyAutoStart();
       if (settings.batteryMode !== prevMode) {
         stopAlert(); // 切换模式后清理残留提醒/闪烁
         applyModeWindowWidth(settings.batteryMode); // 单电池收窄窗口，双电池恢复宽度
+      }
+      if (statusApi && (settings.apiEnabled !== prevApiEnabled || settings.apiPort !== prevApiPort)) {
+        await statusApi.start(settings); // 接口开关/端口变化：重启 HTTP 服务
+        updateTray(monitor.state); // 刷新托盘提示（启动失败时展示原因）
       }
       await monitor.configure(settings); // 立即按新配置重启轮询
       return { ok: true, settings };
@@ -341,9 +355,18 @@ app.whenReady().then(async () => {
     if (mainWindow) mainWindow.webContents.send('battery:update', state);
   });
 
+  // 本机只读状态接口（仅监听 127.0.0.1，直接返回 monitor.state 缓存）
+  statusApi = new StatusApiServer({
+    getState: () => monitor.state,
+    getSettings: () => settings,
+    version: app.getVersion(),
+  });
+
   registerIpc();
   createWindow(!launchedAtLogin);
   createTray();
+  await statusApi.start(settings);
+  updateTray(monitor.state); // 接口启动失败时把原因附加到托盘提示
   applyAutoStart();
 
   // 首次运行：引导用户把托盘图标从溢出区拖到通知区常驻（仅一次）
@@ -373,5 +396,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async () => {
   isQuitting = true;
   stopFlash();
+  if (statusApi) await statusApi.stop();
   if (monitor) await monitor.stop();
 });

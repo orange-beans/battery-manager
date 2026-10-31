@@ -179,12 +179,20 @@ async function loadSettingsIntoForm() {
   $('#set-lowalert-interval').value = settings.lowAlertIntervalMin;
   $('#set-lowalert-interval').disabled = !settings.lowAlertEnabled;
   $('#set-mode').value = settings.batteryMode;
+  $('#set-api-enabled').checked = settings.apiEnabled;
+  $('#set-api-port').value = settings.apiPort;
+  $('#set-api-port').disabled = !settings.apiEnabled;
   await refreshPorts(settings.port);
   refreshOffsets(true); // 打开设置页自动读取硬件偏移（静默）
   applyModeUI();
 }
 
 async function saveSettings() {
+  const apiPort = Number($('#set-api-port').value);
+  if (!Number.isInteger(apiPort) || apiPort < 1024 || apiPort > 65535) {
+    toast('状态接口端口需为 1024 ~ 65535 的整数', true);
+    return;
+  }
   const newSettings = {
     ...currentSettings,
     port: $('#set-port').value,
@@ -195,6 +203,8 @@ async function saveSettings() {
     lowBatteryThreshold: Number($('#set-lowth').value),
     lowAlertEnabled: $('#set-lowalert').checked,
     lowAlertIntervalMin: Number($('#set-lowalert-interval').value),
+    apiEnabled: $('#set-api-enabled').checked,
+    apiPort,
   };
   const res = await window.api.saveSettings(newSettings);
   if (res.ok) {
@@ -263,6 +273,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   $('#set-lowalert').addEventListener('change', (e) => {
     $('#set-lowalert-interval').disabled = !e.target.checked;
+  });
+  $('#set-api-enabled').addEventListener('change', (e) => {
+    $('#set-api-port').disabled = !e.target.checked;
   });
   $('#btn-read-offset').addEventListener('click', () => refreshOffsets(false));
   $('#btn-write-offset-a').addEventListener('click', (e) => writeOffset('A', e.currentTarget));

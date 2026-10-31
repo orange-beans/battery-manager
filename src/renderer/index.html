@@ -218,6 +218,20 @@
         <button id="btn-read-offset" class="btn btn-ghost">读取当前偏移值</button>
       </div>
 
+      <div class="form-row form-row-inline">
+        <div>
+          <label>本机状态接口</label>
+          <p class="hint">供本机其他软件只读查询电池状态；仅监听 127.0.0.1，端口 1024 ~ 65535</p>
+        </div>
+        <div class="inline-controls">
+          <input type="number" id="set-api-port" class="num-input" min="1024" max="65535" step="1" value="3010" />
+          <label class="switch">
+            <input type="checkbox" id="set-api-enabled" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="form-row">
         <label>配置文件</label>
         <div class="inline-controls">

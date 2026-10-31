@@ -19,6 +19,8 @@ const DEFAULT_SETTINGS = {
   lowAlertEnabled: true,  // 低电量提醒开关（系统通知 + 托盘图标闪烁）
   lowAlertIntervalMin: 5, // 提醒频率（分钟）：0=仅提醒一次, 1/2/5/10
   trayHintShown: false,   // 是否已展示过“拖出托盘图标”的首次运行提示
+  apiEnabled: true,       // 本机只读状态接口开关
+  apiPort: 3010,          // 状态接口端口（仅监听 127.0.0.1）
 };
 
 function clamp(v, min, max, fallback) {
@@ -43,6 +45,11 @@ function sanitize(raw) {
     lowAlertEnabled: typeof s.lowAlertEnabled === 'boolean' ? s.lowAlertEnabled : d.lowAlertEnabled,
     lowAlertIntervalMin: [0, 1, 2, 5, 10].includes(s.lowAlertIntervalMin) ? s.lowAlertIntervalMin : d.lowAlertIntervalMin,
     trayHintShown: typeof s.trayHintShown === 'boolean' ? s.trayHintShown : d.trayHintShown,
+    apiEnabled: typeof s.apiEnabled === 'boolean' ? s.apiEnabled : d.apiEnabled,
+    apiPort:
+      Number.isInteger(s.apiPort) && s.apiPort >= 1024 && s.apiPort <= 65535
+        ? s.apiPort
+        : d.apiPort,
   };
 }
 
@@ -57,7 +64,13 @@ class SettingsStore {
   load() {
     try {
       const text = fs.readFileSync(this.file, 'utf-8');
-      return sanitize(JSON.parse(text));
+      const raw = JSON.parse(text);
+      const s = sanitize(raw);
+      // 旧配置文件缺少新增字段时回写一次，便于用户直接查看/编辑
+      if (!raw || typeof raw !== 'object' || !('apiEnabled' in raw) || !('apiPort' in raw)) {
+        this.save(s);
+      }
+      return s;
     } catch {
       return { ...DEFAULT_SETTINGS };
     }
