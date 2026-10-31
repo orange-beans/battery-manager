@@ -16,7 +16,6 @@ function isSingleMode() {
 /** 按电池模式调整界面结构（卡片数量、标题、B 相关项显隐） */
 function applyModeUI() {
   const single = isSingleMode();
-  $('#view-dashboard').classList.toggle('single-col', single);
   $('.cards').classList.toggle('single', single);
   $('#card-B').classList.toggle('hidden', single);
   $('#card-A .card-head h2').textContent = single ? '电池' : '电池 A';
